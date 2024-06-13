@@ -16,10 +16,14 @@ pub mod checking {
     use super::*;
 
     pub fn initialize(_ctx: Context<Initialize>) -> Result<()> {
-        // msg!(ctx);
         Ok(())
     }
-    pub fn stake(ctx: Context<Stake>) -> Result<()> {
+    pub fn stake(_ctx: Context<Stake>) -> Result<()> {
+        let stake_info_acc = &_ctx.accounts.stake_info_account;
+        let stake_acc = &_ctx.accounts.stake_account;
+        if stake_info_acc.is_staked {
+            return Err(Errors::IsStaked.into());
+        }
         Ok(())
     }
     // pub fn unstake(ctx: Context) -> Result<()> {
@@ -56,10 +60,9 @@ pub struct Stake<'info> {
         seeds=[constants::STAKE_INFO_SEED,signer.key.as_ref()],
         bump,
         payer=signer,
-        token::mint=mint_account,
-        token::authority=stake_info_account
+        space=8+std::mem::size_of::<StakeInfo>()  
     )]
-    pub stake_info_account: Account<'info, TokenAccount>,
+    pub stake_info_account: Account<'info, StakeInfo>,
 
     #[account(
         init_if_needed,
@@ -82,8 +85,18 @@ pub struct Stake<'info> {
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
-#[account()]
+#[account]
+
 pub struct StakeInfo {
     pub stake_at_slot: u64,
     pub is_staked: bool,
+}
+#[error_code]
+pub enum Errors {
+    #[msg("The user has already staked")]
+    IsStaked,
+    #[msg("The user has not staked")]
+    NotStaked,
+    #[msg("No token to stake")]
+    NoTokens,
 }
