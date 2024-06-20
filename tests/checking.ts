@@ -4,6 +4,7 @@ import { Checking } from "../target/types/checking";
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
 import {
   createMint,
+  getAccount,
   getOrCreateAssociatedTokenAccount,
   mintTo,
 } from "@solana/spl-token";
@@ -81,14 +82,14 @@ describe("checking", () => {
       payer.publicKey
     );
     //Minting it to the newly created User_ATA
-    await mintTo(
-      connection,
-      payer.payer,
-      mintKeyPair.publicKey,
-      user_ata.address,
-      payer.payer,
-      1000_000_000_000
-    );
+    // await mintTo(
+    //   connection,
+    //   payer.payer,
+    //   mintKeyPair.publicKey,
+    //   user_ata.address,
+    //   payer.payer,
+    //   1000_000_000_000
+    // );
 
     const [user_stake_account] = PublicKey.findProgramAddressSync(
       [Buffer.from("token")],
@@ -116,7 +117,7 @@ describe("checking", () => {
     console.log("tx", tx);
   });
 
-  it("Check user_account_info after stake", async () => {
+  it("Check user_account_info & stake_account after stake", async () => {
     const [user_account_info] = PublicKey.findProgramAddressSync(
       [Buffer.from("stake_info"), payer.publicKey.toBuffer()],
       program.programId
@@ -133,5 +134,33 @@ describe("checking", () => {
     );
 
     console.log("accountData", accountData);
+  });
+
+  it("USER ATA details", async () => {
+    const ata = await getOrCreateAssociatedTokenAccount(
+      connection,
+      payer.payer,
+      mintKeyPair.publicKey,
+      payer.publicKey
+    );
+    console.log("ata", ata);
+    assert.strictEqual(
+      Number(ata.amount),
+      8999000000000,
+      "The account should have staked"
+    );
+  });
+
+  it("PDA+TOKENACCOUNT details", async () => {
+    // Find the PDA for the stake account
+    const [stakeAccount] = PublicKey.findProgramAddressSync(
+      [Buffer.from("token"), payer.publicKey.toBuffer()],
+      program.programId
+    );
+    const stakeAccountData = await getAccount(
+      provider.connection,
+      stakeAccount
+    );
+    console.log("stakeAccountData", stakeAccountData);
   });
 });
